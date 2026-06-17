@@ -257,3 +257,58 @@ holds expo-router routes only and imports screens from `src/`.
 **Prop-pattern rule of thumb:** extract the props you _transform_ (`style` → merge)
 or _consume_ (`variant` → don't forward); for props you only want to _default_, put
 them before `{...props}` so callers override by simply passing their own.
+
+## Stage 1 — Mock auth + launch gate
+
+The three-layer separation: **slice** = pure synchronous state changes, **thunks** =
+async orchestration + side-effects, **components/selectors** = render state & fire intents.
+
+### Redux Toolkit
+
+| Concept                                                                    | Where                                         |
+| -------------------------------------------------------------------------- | --------------------------------------------- |
+| `createSlice` (state + reducers + auto actions)                            | `src/features/auth/authSlice.ts`              |
+| Immer "mutation" in reducers (pure, sync only)                             | `src/features/auth/authSlice.ts`              |
+| `PayloadAction<T>` typing the action payload                               | `src/features/auth/authSlice.ts` (`signedIn`) |
+| Past-tense reducers = events (`signedIn`/`signedOut`)                      | `src/features/auth/authSlice.ts`              |
+| `configureStore` + `RootState`/`AppDispatch` (derived, never hand-written) | `src/shared/store/index.ts`                   |
+| Typed hooks (`useAppDispatch`/`useAppSelector`)                            | `src/shared/store/hooks.ts`                   |
+| `<Provider store>` must wrap anything using hooks                          | `app/_layout.tsx` (`RootLayout` → `Gate`)     |
+
+### Thunks (async layer)
+
+| Concept                                                            | Where                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------- |
+| Plain thunk = fn returning `async (dispatch) => …`                 | `src/features/auth/authThunks.ts`                    |
+| Thunk middleware enabled by default in RTK                         | (concept)                                            |
+| `dispatch(thunk())` — call it, don't pass the creator              | `app/_layout.tsx`, `app/index.tsx`                   |
+| No `createAsyncThunk` needed — `status` models lifecycle           | `src/features/auth/authThunks.ts`                    |
+| Persist/clear storage _before_ dispatching state                   | `src/features/auth/authThunks.ts` (`login`/`logout`) |
+| Reach for a thunk only when async/multi-step; else dispatch direct | (concept)                                            |
+
+### Secure storage (`expo-secure-store`)
+
+| Concept                                                    | Where                               |
+| ---------------------------------------------------------- | ----------------------------------- |
+| Encrypted (Keychain/Keystore) vs plaintext AsyncStorage    | `src/features/auth/tokenStorage.ts` |
+| Secrets → secure-store; everything else → AsyncStorage     | (concept)                           |
+| Async, string-only API; key charset `[A-Za-z0-9._-]`       | `src/features/auth/tokenStorage.ts` |
+| `getItemAsync` returns `string \| null` (drives bootstrap) | `src/features/auth/tokenStorage.ts` |
+| Wrapper module = single owner of token I/O                 | `src/features/auth/tokenStorage.ts` |
+| `return` the promise so callers can `await` the write      | `src/features/auth/tokenStorage.ts` |
+
+### Launch gate & protected routes
+
+| Concept                                                           | Where                            |
+| ----------------------------------------------------------------- | -------------------------------- |
+| Redux is in-memory; secure-store is the persistence layer         | (concept)                        |
+| Bootstrap: read token on launch → dispatch `signedIn`/`signedOut` | `app/_layout.tsx` (`Gate`)       |
+| `preventAutoHideAsync()` at module scope (runs on import)         | `app/_layout.tsx`                |
+| Splash held until fonts AND session resolve (`ready`)             | `app/_layout.tsx`                |
+| `hideAsync()` in an effect keyed on `[loaded, error, status]`     | `app/_layout.tsx`                |
+| `Stack.Protected guard={…}` — auth state _is_ routing             | `app/_layout.tsx`                |
+| Login/logout = `dispatch` intents from the component              | `app/login.tsx`, `app/index.tsx` |
+
+**Gotcha that `tsc` won't catch:** `dispatch(myThunk)` (passing the creator) instead of
+`dispatch(myThunk())` (calling it) type-checks — a zero-arg creator is structurally
+assignable to the thunk signature — but the async body never runs. Always call it.
