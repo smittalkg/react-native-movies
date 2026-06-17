@@ -1,8 +1,11 @@
+import { logout } from "@/features/auth/authThunks";
+import { useAppDispatch } from "@/shared/store/hooks";
 import AppImage from "@/shared/ui/app-image";
 import AppText from "@/shared/ui/app-text";
-import { View } from "react-native";
+import { Button, View } from "react-native";
 
 export default function Index() {
+  const dispatch = useAppDispatch();
   return (
     <View
       style={{
@@ -16,6 +19,7 @@ export default function Index() {
         source="https://picsum.photos/seed/movie/400/600"
         style={{ width: 200, height: 300, borderRadius: 12 }}
       />
+      <Button title="Logout" onPress={() => dispatch(logout())} />
     </View>
   );
 }

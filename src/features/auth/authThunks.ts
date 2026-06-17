@@ -1,7 +1,7 @@
 import type { AppDispatch } from "@/shared/store";
 import { signedIn, signedOut } from "./authSlice";
 
-import { getToken } from "./tokenStorage";
+import { clearToken, getToken, saveToken } from "./tokenStorage";
 
 export function bootstrapAuth() {
   return async (dispatch: AppDispatch) => {
@@ -11,5 +11,19 @@ export function bootstrapAuth() {
     } else {
       dispatch(signedOut());
     }
+  };
+}
+
+export function login(token: string) {
+  return async (dispatch: AppDispatch) => {
+    await saveToken(token);
+    dispatch(signedIn(token));
+  };
+}
+
+export function logout() {
+  return async (dispatch: AppDispatch) => {
+    await clearToken();
+    dispatch(signedOut());
   };
 }

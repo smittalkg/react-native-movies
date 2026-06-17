@@ -35,7 +35,18 @@ function Gate() {
     return null;
   }
 
-  return <Stack />;
+  const isAuthenticated = status === "authenticated";
+
+  return (
+    <Stack>
+      <Stack.Protected guard={isAuthenticated}>
+        <Stack.Screen name="index" />
+      </Stack.Protected>
+      <Stack.Protected guard={!isAuthenticated}>
+        <Stack.Screen name="login" />
+      </Stack.Protected>
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
