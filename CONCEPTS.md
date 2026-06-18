@@ -362,3 +362,34 @@ extracting a `memo`'d `MovieRow` + module-scope `keyExtractor`/`renderItem` pays
 **Gotcha that `tsc` won't catch:** a wrong endpoint string (`/search/movies` vs
 `/search/movie`) compiles fine and only fails at runtime — exactly the boundary Zod
 starts guarding in Stage 3.
+
+## Stage 3 — Validate responses at the boundary (Zod)
+
+A schema is a _runtime value_ that both validates unknown data and generates the TS
+type. The generic on `.get<T>()` was an unchecked **assertion**; `schema.parse()` is a
+real **check**. The schema is the single source of truth — runtime guard + static type
+from one definition, so they can't drift.
+
+### Schemas & inferred types
+
+| Concept                                                                  | Where                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------- |
+| Primitives + composition (`z.object`, `z.array`, nesting)                | `src/features/movies/schema.ts`                 |
+| `.nullable()` (present, may be `null`) vs `.optional()` (may be absent)  | `src/features/movies/schema.ts` (`poster_path`) |
+| Reuse a schema inside another (`z.array(movieSchema)`)                   | `src/features/movies/schema.ts`                 |
+| `z.infer<typeof schema>` derives the TS type (no hand-written interface) | `src/features/movies/types.ts`                  |
+| Schema = single source of truth (runtime + compile-time)                 | `schema.ts` → `types.ts`                        |
+
+### Validating at the API boundary
+
+| Concept                                                                                      | Where                        |
+| -------------------------------------------------------------------------------------------- | ---------------------------- |
+| Drop the lying `.get<T>()` generic; `parse(res.data)` instead                                | `src/features/movies/api.ts` |
+| `.parse()` throws `ZodError`; `.safeParse()` returns `{ success, ... }`                      | `src/features/movies/api.ts` |
+| In a `queryFn`, `.parse()` throwing → React Query `isError` (same path as a network failure) | `src/features/movies/api.ts` |
+| `ZodError` names the exact field + expected vs got                                           | (DevTools console)           |
+
+**Why this beats the Stage 2 generic:** a surprise `null`, a missing field, or a wrong
+shape is caught _at the edge_ with a precise, located error — instead of surfacing as a
+vague undefined-crash deep in render. Verify by temporarily flipping a field's type
+(e.g. `title: z.number()`) and watching the screen hit its error branch.
