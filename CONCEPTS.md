@@ -393,3 +393,50 @@ from one definition, so they can't drift.
 shape is caught _at the edge_ with a precise, located error — instead of surfacing as a
 vague undefined-crash deep in render. Verify by temporarily flipping a field's type
 (e.g. `title: z.number()`) and watching the screen hit its error branch.
+
+## Stage 4 — Client state (Redux slice) + derived data + modal routes
+
+Two state systems, two jobs. **React Query** owns _server_ state (the fetched movie
+list — it can refetch, cache, go stale). A **Redux slice** owns _client_ state (how the
+user wants that list sorted/filtered — it's intent, not data). The screen reads both and
+computes a **derived** view from them; the derived array is never stored, it's recomputed
+with `useMemo`.
+
+### Filter/sort slice (pure sync client state)
+
+| Concept                                                                     | Where                                           |
+| --------------------------------------------------------------------------- | ----------------------------------------------- |
+| Slice holds UI _intent_ (`sortBy`, `minimumRating`), not fetched data       | `src/features/movies/filtersSlice.ts`           |
+| `as const` array → derive the union type from it (one source, can't drift)  | `filtersSlice.ts` (`SORT_OPTIONS`/`SortOption`) |
+| Sync state change = dispatch the action directly (no thunk — nothing async) | `src/features/movies/components/FilterBar.tsx`  |
+| Reducers stay pure; `PayloadAction<T>` types the payload                    | `filtersSlice.ts`                               |
+| Add the reducer to the store alongside `auth`                               | `src/shared/store/index.ts`                     |
+
+### Derived data + memoization (the deferred Stage 2 payoff)
+
+| Concept                                                                           | Where                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `useMemo` over `[data, minimumRating, sortBy]` — recompute only when inputs move  | `src/features/movies/components/MovieSearchScreen.tsx` |
+| `Array.sort` mutates in place → copy first (`[...filtered].sort()`)               | `MovieSearchScreen.tsx`                                |
+| Derived array isn't stored anywhere — recomputed from server + client state       | `MovieSearchScreen.tsx`                                |
+| `memo`'d `MovieRow` in its own file → stable `renderItem`/`keyExtractor` matter   | `src/features/movies/components/MovieRow.tsx`          |
+| Empty-state guard on `data` (not `visibleData`, which is always an array)         | `MovieSearchScreen.tsx`                                |
+| Conditional style via array form `style={[base, cond && active]}` (falsy ignored) | `src/features/movies/components/FilterBar.tsx`         |
+
+### Detail fetch + modal route (expo-router)
+
+| Concept                                                                             | Where                                           |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Standalone `movieDetailSchema` (superset of search) + `z.infer` type                | `src/features/movies/schema.ts` / `types.ts`    |
+| Path param in the URL (`/movie/${id}`) — no `params: {}` (that's for query strings) | `src/features/movies/api.ts` (`getMovieDetail`) |
+| `queryKey: ["movie", id]` → per-id cache entry                                      | `src/features/movies/hooks/useMovieDetail.ts`   |
+| Dynamic route file `[id].tsx`; `useLocalSearchParams<{id:string}>()`                | `app/movie/[id].tsx`                            |
+| Route params arrive as **strings** → convert at the boundary (`Number(id)`)         | `app/movie/[id].tsx`                            |
+| `<Stack.Screen options={{ presentation: "modal" }}>` → slides up as a sheet         | `app/_layout.tsx`                               |
+| `<Link href asChild>` clones its child, injects navigation — no extra wrapper       | `src/features/movies/components/MovieRow.tsx`   |
+| `Link` (declarative tap-to-navigate) vs `useRouter().push` (imperative)             | `MovieRow.tsx`                                  |
+
+**Gotcha that `tsc` won't catch:** `SortOption` is a _type_ — it has no runtime
+existence, so you can't `.map()` over it. You need a real `SORT_OPTIONS` array and derive
+the type _from_ it (`as const` + indexed access). Also: a `.map()` without a `key`, or a
+`poster_path: null` fed into a URL string, both compile fine and only show up at runtime.
