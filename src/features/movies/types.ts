@@ -1,15 +1,5 @@
-export interface Movie {
-  id: number;
-  title: string;
-  poster_path: string | null;
-  overview: string;
-  release_date: string;
-  vote_average: number;
-}
+import { z } from "zod";
+import { movieSchema, movieSearchResponseSchema } from "./schema";
 
-export interface MovieSearchResponse {
-  page: number;
-  results: Movie[];
-  total_pages: number;
-  total_results: number;
-}
+export type Movie = z.infer<typeof movieSchema>;
+export type MovieSearchResponse = z.infer<typeof movieSearchResponseSchema>;

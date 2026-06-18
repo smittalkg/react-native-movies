@@ -1,7 +1,9 @@
 import { tmdbClient } from "@/shared/api/client";
-import { Movie, MovieSearchResponse } from "./types";
+import { movieSearchResponseSchema } from "./schema";
+import { Movie } from "./types";
 
 export async function searchMovies(query: string): Promise<Movie[]> {
-  const res = await tmdbClient.get<MovieSearchResponse>("/search/movie", { params: { query } });
-  return res.data.results;
+  const res = await tmdbClient.get("/search/movie", { params: { query } });
+  const parsed = movieSearchResponseSchema.parse(res.data);
+  return parsed.results;
 }
