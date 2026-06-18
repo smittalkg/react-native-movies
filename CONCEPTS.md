@@ -312,3 +312,53 @@ async orchestration + side-effects, **components/selectors** = render state & fi
 **Gotcha that `tsc` won't catch:** `dispatch(myThunk)` (passing the creator) instead of
 `dispatch(myThunk())` (calling it) type-checks — a zero-arg creator is structurally
 assignable to the thunk signature — but the async body never runs. Always call it.
+
+## Stage 2 — Fetch/search TMDB
+
+The networking layer: **Axios** (one configured client + interceptors) as the HTTP
+layer, **React Query** on top as the caching/server-state layer. Interceptors put auth
+and error-handling in _one_ place instead of at every call site.
+
+### Axios client + interceptors
+
+| Concept                                                                            | Where                        |
+| ---------------------------------------------------------------------------------- | ---------------------------- |
+| `create({ baseURL, headers })` — one configured instance, imported everywhere      | `src/shared/api/client.ts`   |
+| Why Axios over `fetch`: interceptors, base config, auto-JSON, rejects on non-2xx   | `src/shared/api/client.ts`   |
+| Request interceptor: mutate `config.headers`, **return config**                    | `src/shared/api/client.ts`   |
+| Response interceptor: `use(onFulfilled, onRejected)`; 401 → logout, then re-reject | `src/shared/api/client.ts`   |
+| `isAxiosError(error)` narrows `unknown` → typed `AxiosError`                       | `src/shared/api/client.ts`   |
+| Dispatch outside React via the `store` singleton (`store.dispatch`)                | `src/shared/api/client.ts`   |
+| Named imports (`{ create, isAxiosError }`) — avoids `no-named-as-default-member`   | `src/shared/api/client.ts`   |
+| `params: { query }` — Axios serializes + URL-encodes the query string              | `src/features/movies/api.ts` |
+| `.get<T>(...)` generic types `res.data` as `T`                                     | `src/features/movies/api.ts` |
+
+### React Query over a real API
+
+| Concept                                                                  | Where                                         |
+| ------------------------------------------------------------------------ | --------------------------------------------- |
+| `new QueryClient()` singleton (created once, module scope)               | `src/shared/api/queryClient.ts`               |
+| `<QueryClientProvider>` wraps the tree (independent of Redux Provider)   | `app/_layout.tsx`                             |
+| `queryKey` includes the search term → per-term cache entry               | `src/features/movies/hooks/useMovieSearch.ts` |
+| `enabled: query.length > 0` — stay idle until there's input              | `src/features/movies/hooks/useMovieSearch.ts` |
+| `queryFn` closes over the arg that's also in the key (refetch on change) | `src/features/movies/hooks/useMovieSearch.ts` |
+| Custom hook wraps `useQuery` for reuse/testability/UI separation         | `src/features/movies/hooks/useMovieSearch.ts` |
+
+### Search screen
+
+| Concept                                                      | Where                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------ |
+| Controlled `TextInput` drives `query` state → hook → refetch | `src/features/movies/components/MovieSearchScreen.tsx` |
+| TMDB image URL = `https://image.tmdb.org/t/p/<size><path>`   | `src/features/movies/components/MovieSearchScreen.tsx` |
+| Guard `poster_path` (`string \| null`) before building URL   | `src/features/movies/components/MovieSearchScreen.tsx` |
+| Distinct loading / error / empty / results branches          | `src/features/movies/components/MovieSearchScreen.tsx` |
+| Thin route wrapper renders the feature screen                | `app/index.tsx`                                        |
+
+**Memoization deferred to Stage 4.** `React.memo`/`useMemo` aren't applied here on
+purpose — a small list has no memo-consumer that cares about referential identity.
+Stage 4 adds client-side sort/filter (a derived array = real `useMemo`), at which point
+extracting a `memo`'d `MovieRow` + module-scope `keyExtractor`/`renderItem` pays off.
+
+**Gotcha that `tsc` won't catch:** a wrong endpoint string (`/search/movies` vs
+`/search/movie`) compiles fine and only fails at runtime — exactly the boundary Zod
+starts guarding in Stage 3.
