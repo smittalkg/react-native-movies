@@ -1,50 +1,62 @@
-import AppImage from "@/shared/ui/app-image";
+import { useAppSelector } from "@/shared/store/hooks";
 import AppText from "@/shared/ui/app-text";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, TextInput, View } from "react-native";
 import { useMovieSearch } from "../hooks/useMovieSearch";
+import type { Movie } from "../types";
+import FilterBar from "./FilterBar";
+import MovieRow from "./MovieRow";
 
-const POSTER_BASE = "https://image.tmdb.org/t/p/w342";
+const keyExtractor = (movie: Movie) => String(movie.id);
 
 export default function MovieSearchScreen() {
-    const [text, setText] = useState("");
-    const { data, isLoading, isError } = useMovieSearch(text);
+  const [text, setText] = useState("");
+  const { data, isLoading, isError } = useMovieSearch(text);
 
-    return (
-        <View style={sheet.container}>
-            <TextInput
-                style={sheet.textInput}
-                value={text}
-                placeholder="Search Movie"
-                onChangeText={setText}
-            />
-            {isLoading && <AppText>Searching</AppText>}
+  const { minimumRating, sortBy } = useAppSelector((s) => s.filters);
 
-            {isError && <AppText>Something went wrong</AppText>}
+  const visibleData = useMemo(() => {
+    if (!data) return [];
+    const filtered =
+      minimumRating == null ? data : data.filter((d) => d.vote_average >= minimumRating);
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "popularity":
+          return b.popularity - a.popularity;
+        case "rating":
+          return b.vote_average - a.vote_average;
+        case "release_date":
+          return b.release_date.localeCompare(a.release_date);
+      }
+    });
+  }, [data, minimumRating, sortBy]);
 
-            {data && data.length > 0 && (
-                <FlatList
-                    data={data}
-                    keyExtractor={(movie) => String(movie.id)}
-                    renderItem={({ item }) => (
-                        <View style={sheet.rowContainer}>
-                            {item.poster_path && (
-                                <AppImage source={`${POSTER_BASE}${item.poster_path}`} style={sheet.image} />
-                            )}
-                            <AppText>{item.title}</AppText>
-                        </View>
-                    )}
-                />
-            )}
+  const renderItem = useCallback(({ item }: { item: Movie }) => <MovieRow item={item} />, []);
 
-            {data && data.length === 0 && <AppText>No results</AppText>}
-        </View>
-    );
+  return (
+    <View style={sheet.container}>
+      <TextInput
+        style={sheet.textInput}
+        value={text}
+        placeholder="Search Movie"
+        onChangeText={setText}
+      />
+      <FilterBar />
+
+      {isLoading && <AppText>Searching</AppText>}
+
+      {isError && <AppText>Something went wrong</AppText>}
+
+      {visibleData.length > 0 && (
+        <FlatList data={visibleData} keyExtractor={keyExtractor} renderItem={renderItem} />
+      )}
+
+      {data && visibleData.length === 0 && <AppText>No results</AppText>}
+    </View>
+  );
 }
 
 const sheet = StyleSheet.create({
-    container: { flex: 1, padding: 16, gap: 12 },
-    textInput: { borderWidth: 1, height: 40, padding: 8, borderColor: "#ccc", borderRadius: 12 },
-    rowContainer: { flexDirection: "row", marginBottom: 12, gap: 12 },
-    image: { width: 80, height: 120, borderRadius: 8 },
+  container: { flex: 1, padding: 16, gap: 12 },
+  textInput: { borderWidth: 1, height: 40, padding: 8, borderColor: "#ccc", borderRadius: 12 },
 });
