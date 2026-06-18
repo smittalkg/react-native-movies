@@ -1,6 +1,8 @@
 import { bootstrapAuth } from "@/features/auth/authThunks";
+import { queryClient } from "@/shared/api/queryClient";
 import { store } from "@/shared/store";
 import { useAppDispatch, useAppSelector } from "@/shared/store/hooks";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 
@@ -51,8 +53,10 @@ function Gate() {
 
 export default function RootLayout() {
   return (
-    <Provider store={store}>
-      <Gate />
-    </Provider>
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <Gate />
+      </Provider>
+    </QueryClientProvider>
   );
 }
