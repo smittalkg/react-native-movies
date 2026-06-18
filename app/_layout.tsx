@@ -43,6 +43,7 @@ function Gate() {
     <Stack>
       <Stack.Protected guard={isAuthenticated}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="movie/[id]" options={{ presentation: "modal" }} />
       </Stack.Protected>
       <Stack.Protected guard={!isAuthenticated}>
         <Stack.Screen name="login" />
