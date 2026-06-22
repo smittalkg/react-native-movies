@@ -1,5 +1,6 @@
 import AppImage from "@/shared/ui/app-image";
 import AppText from "@/shared/ui/app-text";
+import LottieView from "lottie-react-native";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useMovieDetail } from "../hooks/useMovieDetail";
 
@@ -10,7 +11,14 @@ export default function MovieDetailScreen({ id }: { id: number }) {
 
   return (
     <ScrollView>
-      {isLoading && <AppText>Loading...</AppText>}
+      {isLoading && (
+        <LottieView
+          source={require("@assets/lottie/loading-spinner.json")}
+          autoPlay
+          loop
+          style={{ width: 200, height: 200 }}
+        />
+      )}
 
       {isError && <AppText>Something went wrong...</AppText>}
 
