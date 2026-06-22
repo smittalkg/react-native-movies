@@ -1,5 +1,6 @@
 import AppImage from "@/shared/ui/app-image";
 import AppText from "@/shared/ui/app-text";
+import { images } from "@/shared/ui/images";
 import { Link } from "expo-router";
 import { memo } from "react";
 import { Pressable, StyleSheet } from "react-native";
@@ -11,9 +12,7 @@ const MovieRow = memo(function MovieRow({ item }: { item: Movie }) {
   return (
     <Link href={`/movie/${item.id}`} asChild>
       <Pressable style={sheet.container}>
-        {item.poster_path && (
-          <AppImage source={`${POSTER_BASE}${item.poster_path}`} style={sheet.image} />
-        )}
+        <AppImage source={item.poster_path ? `${POSTER_BASE}${item.poster_path}` : images.placeholderPoster} style={sheet.image} />
         <AppText>{item.title}</AppText>
       </Pressable>
     </Link>
