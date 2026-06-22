@@ -1,5 +1,6 @@
 import { useAppSelector } from "@/shared/store/hooks";
 import AppText from "@/shared/ui/app-text";
+import { LoadingSpinner } from "@/shared/ui/loading-spinner";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, StyleSheet, TextInput, View } from "react-native";
 import { useMovieSearch } from "../hooks/useMovieSearch";
@@ -43,7 +44,9 @@ export default function MovieSearchScreen() {
       />
       <FilterBar />
 
-      {isLoading && <AppText>Searching</AppText>}
+      {isLoading && (
+        <LoadingSpinner />
+      )}
 
       {isError && <AppText>Something went wrong</AppText>}
 
