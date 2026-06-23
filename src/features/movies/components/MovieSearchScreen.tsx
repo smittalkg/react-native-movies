@@ -44,9 +44,7 @@ export default function MovieSearchScreen() {
       />
       <FilterBar />
 
-      {isLoading && (
-        <LoadingSpinner />
-      )}
+      {isLoading && <LoadingSpinner />}
 
       {isError && <AppText>Something went wrong</AppText>}
 

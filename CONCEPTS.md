@@ -450,24 +450,24 @@ fit for loading/empty/success states.
 
 ### Lottie + the dev-build requirement
 
-| Concept                                                                            | Where                                          |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `<LottieView source={require(...)} autoPlay loop style={{w,h}} />`                 | `src/shared/ui/loading-spinner.tsx`            |
-| Anatomy of a Lottie file: shape layer + ellipse + `trim` (arc) + stroke + rotation | `assets/lottie/loading-spinner.json`           |
-| Colors are 0–1 RGB floats in the `"c"` array (not 0–255)                           | `assets/lottie/loading-spinner.json` (stroke)  |
-| Extract a shared `<LoadingSpinner />` once it's used in 2+ screens                  | `MovieSearchScreen.tsx`, `MovieDetailScreen.tsx`|
-| Native module → **not in Expo Go**; needs a dev build (`expo-dev-client`)          | `package.json` (`ios`/`android` → `run:*`)     |
-| `npx expo run:ios` builds+installs once; then `expo start --dev-client` daily      | (terminal)                                     |
-| Rebuild native only when native deps/config change; JS edits hot-reload            | —                                              |
+| Concept                                                                            | Where                                            |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `<LottieView source={require(...)} autoPlay loop style={{w,h}} />`                 | `src/shared/ui/loading-spinner.tsx`              |
+| Anatomy of a Lottie file: shape layer + ellipse + `trim` (arc) + stroke + rotation | `assets/lottie/loading-spinner.json`             |
+| Colors are 0–1 RGB floats in the `"c"` array (not 0–255)                           | `assets/lottie/loading-spinner.json` (stroke)    |
+| Extract a shared `<LoadingSpinner />` once it's used in 2+ screens                 | `MovieSearchScreen.tsx`, `MovieDetailScreen.tsx` |
+| Native module → **not in Expo Go**; needs a dev build (`expo-dev-client`)          | `package.json` (`ios`/`android` → `run:*`)       |
+| `npx expo run:ios` builds+installs once; then `expo start --dev-client` daily      | (terminal)                                       |
+| Rebuild native only when native deps/config change; JS edits hot-reload            | —                                                |
 
 ### Static images (bundled assets)
 
-| Concept                                                                             | Where                                          |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Remote image = URL **string**; bundled image = **`require()`** (Metro bundles it in)| `MovieRow.tsx` / `MovieDetailScreen.tsx`       |
-| `expo-image` `source` accepts both forms — ternary picks per `poster_path`          | `MovieRow.tsx` (poster or placeholder)         |
-| `@assets/*` alias (root `assets/`, distinct from `@/` = `src/`)                     | `tsconfig.json`                                |
-| Central image registry (`as const`) so every bundled image lives in one file       | `src/shared/ui/images.ts`                      |
+| Concept                                                                              | Where                                    |
+| ------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Remote image = URL **string**; bundled image = **`require()`** (Metro bundles it in) | `MovieRow.tsx` / `MovieDetailScreen.tsx` |
+| `expo-image` `source` accepts both forms — ternary picks per `poster_path`           | `MovieRow.tsx` (poster or placeholder)   |
+| `@assets/*` alias (root `assets/`, distinct from `@/` = `src/`)                      | `tsconfig.json`                          |
+| Central image registry (`as const`) so every bundled image lives in one file         | `src/shared/ui/images.ts`                |
 
 **Gotcha that `tsc` won't catch:** `require()` of an asset resolves to `any`, so a wrong
 asset path (or the `@/` vs `@assets/` alias mix-up) type-checks fine and only fails when

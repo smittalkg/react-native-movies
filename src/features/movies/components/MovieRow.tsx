@@ -12,7 +12,10 @@ const MovieRow = memo(function MovieRow({ item }: { item: Movie }) {
   return (
     <Link href={`/movie/${item.id}`} asChild>
       <Pressable style={sheet.container}>
-        <AppImage source={item.poster_path ? `${POSTER_BASE}${item.poster_path}` : images.placeholderPoster} style={sheet.image} />
+        <AppImage
+          source={item.poster_path ? `${POSTER_BASE}${item.poster_path}` : images.placeholderPoster}
+          style={sheet.image}
+        />
         <AppText>{item.title}</AppText>
       </Pressable>
     </Link>
