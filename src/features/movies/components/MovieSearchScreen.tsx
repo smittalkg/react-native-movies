@@ -1,4 +1,7 @@
 import { useAppSelector } from "@/shared/store/hooks";
+import { radius } from "@/shared/tokens/radius";
+import { spacing } from "@/shared/tokens/spacing";
+import { useTheme } from "@/shared/tokens/ThemeProvider";
 import AppText from "@/shared/ui/app-text";
 import { LoadingSpinner } from "@/shared/ui/loading-spinner";
 import { useCallback, useMemo, useState } from "react";
@@ -13,6 +16,7 @@ const keyExtractor = (movie: Movie) => String(movie.id);
 export default function MovieSearchScreen() {
   const [text, setText] = useState("");
   const { data, isLoading, isError } = useMovieSearch(text);
+  const { colors } = useTheme();
 
   const { minimumRating, sortBy } = useAppSelector((s) => s.filters);
 
@@ -35,11 +39,19 @@ export default function MovieSearchScreen() {
   const renderItem = useCallback(({ item }: { item: Movie }) => <MovieRow item={item} />, []);
 
   return (
-    <View style={sheet.container}>
+    <View style={[sheet.container, { backgroundColor: colors.white }]}>
       <TextInput
-        style={sheet.textInput}
+        style={[
+          sheet.textInput,
+          {
+            borderColor: colors.lightGrey,
+            color: colors.black,
+            backgroundColor: colors.ultraLightGrey,
+          },
+        ]}
         value={text}
         placeholder="Search Movie"
+        placeholderTextColor={colors.mediumgrey}
         onChangeText={setText}
       />
       <FilterBar />
@@ -58,6 +70,11 @@ export default function MovieSearchScreen() {
 }
 
 const sheet = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  textInput: { borderWidth: 1, height: 40, padding: 8, borderColor: "#ccc", borderRadius: 12 },
+  container: { flex: 1, padding: spacing.medium_sm, gap: spacing.sm },
+  textInput: {
+    borderWidth: 1,
+    height: 40,
+    padding: spacing.x_sm,
+    borderRadius: radius.lg,
+  },
 });
